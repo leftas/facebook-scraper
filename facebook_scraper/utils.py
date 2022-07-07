@@ -2,7 +2,7 @@ import codecs
 import re
 from datetime import datetime, timedelta
 import calendar
-from typing import Optional
+from typing import Any, Optional
 from urllib.parse import parse_qsl, unquote, urlencode, urljoin, urlparse, urlunparse
 
 import dateparser
@@ -283,6 +283,13 @@ def safe_consume(generator, sleep=0):
         traceback.print_exc()
         logger.error(f"Exception when consuming {generator}: {type(e)}: {str(e)}")
     return result
+
+
+def get_item_at_idx(list, idx) -> Optional[Any]:
+    try:
+        return list[idx]
+    except IndexError:
+        return None
 
 
 reaction_lookup = {

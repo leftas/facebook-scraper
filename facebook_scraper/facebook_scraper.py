@@ -30,16 +30,17 @@ from .extractors import (
     PostExtractor,
     extract_hashtag_post,
 )
-from .fb_types import Post, Profile
+from .fb_types import Pages, Post, Profile
 from .page_iterators import (
     iter_group_pages,
     iter_pages,
     iter_photos,
     iter_search_pages,
     iter_hashtag_pages,
+    iter_search_pages_for_page,
 )
 from . import exceptions
-
+from .utils import get_item_at_idx
 
 logger = logging.getLogger(__name__)
 
@@ -196,6 +197,38 @@ class FacebookScraper:
         kwargs["scraper"] = self
         iter_pages_fn = partial(iter_search_pages, word=word, request_fn=self.get, **kwargs)
         return self._generic_get_posts(extract_post, iter_pages_fn, **kwargs)
+
+    def get_followers_by_search(self, page_name: str, **kwargs) -> Iterator[Pages]:
+        kwargs["scraper"] = self
+        follow_regex = re.compile(r"(\d+(?:,\d+)?) followers")
+
+        iter_pages_fn = partial(iter_search_pages_for_page, page_name=page_name, request_fn=self.get, **kwargs)
+
+        page_limit = kwargs.get("page_limit") or DEFAULT_PAGE_LIMIT
+
+        counter = itertools.count(0) if page_limit is None else range(page_limit)
+
+        logger.debug("Starting to iterate pages")
+        for i, page in zip(counter, iter_pages_fn()):
+            logger.debug("Extracting posts from page %s", i)
+            for page_elem in page:
+                info = {}
+                text = page_elem.attrs.get("innerText") or page_elem.attrs.get("aria-label") or page_elem.attrs.get("outerText")
+                lines = text.split('\n')
+                seperator = '·'
+                if seperator in lines[1]:
+                    page_info = seperator.split(seperator)
+                    info['name'] = lines[0]
+                    info['type'] = page_info[0]  # definitely will be there.
+                    additional_info = page_info[-1]
+                else:
+                    info['name'] = lines[0]
+                    info['type'] = lines[1] or get_item_at_idx(lines, 2)  # definitely will be there.
+                    additional_info = lines[-1]
+                if followers := follow_regex.search(text):
+                    info["followers"] = followers.group(1)
+                info["additional_info"] = additional_info
+                yield info
 
     def get_friends(self, account, **kwargs) -> Iterator[Profile]:
         friend_opt = kwargs.get("friends")

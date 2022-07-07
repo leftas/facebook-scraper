@@ -25,7 +25,7 @@ pip install facebook-scraper
 Or, to install the latest master branch:
 
 ```sh
-pip install git+https://github.com/kevinzg/facebook-scraper.git
+pip install git+https://github.com/leftas/facebook-scraper.git
 ```
 
 ## Usage

@@ -11,7 +11,7 @@ from requests.cookies import cookiejar_from_dict
 
 from .constants import DEFAULT_REQUESTS_TIMEOUT
 from .facebook_scraper import FacebookScraper
-from .fb_types import Credentials, Post, RawPost, Profile
+from .fb_types import Credentials, Pages, Post, RawPost, Profile
 from .utils import html_element_to_string, parse_cookie_file
 from . import exceptions
 import traceback
@@ -291,6 +291,63 @@ def get_photos(
         _scraper.login(*credentials)
 
     return _scraper.get_photos(account, **kwargs)
+
+
+def get_followers_by_search(
+        page_name: str,
+        credentials: Optional[Credentials] = None,
+        **kwargs,
+) -> Iterator[Pages]:
+
+    """Get page followers from search.
+    Args:
+        word (str): The page name for searching page followers.
+        credentials (Optional[Tuple[str, str]]): Tuple of email and password to login before scraping.
+        timeout (int): Timeout for requests.
+        page_limit (int): How many pages of posts to go through.
+            Use None to try to get all of them.
+        cookies (Union[dict, CookieJar, str]): Cookie jar to use.
+            Can also be a filename to load the cookies from a file (Netscape format).
+
+    Yields:
+        dict: The post representation in a dictionary.
+    """
+    if not page_name:
+        raise ValueError("You need to specify page name")
+
+    _scraper.requests_kwargs['timeout'] = kwargs.pop('timeout', DEFAULT_REQUESTS_TIMEOUT)
+
+    cookies = kwargs.pop('cookies', None)
+
+    if cookies is not None and credentials is not None:
+        raise ValueError("Can't use cookies and credentials arguments at the same time")
+    set_cookies(cookies)
+
+    options: Union[Dict[str, Any], Set[str]] = kwargs.setdefault('options', {})
+    if isinstance(options, set):
+        warnings.warn("The options argument should be a dictionary.", stacklevel=2)
+        options = {k: True for k in options}
+
+    options.setdefault('word', page_name)
+
+    # TODO: Add a better throttling mechanism
+    if 'sleep' in kwargs:
+        warnings.warn(
+            "The sleep parameter has been removed, it won't have any effect.", stacklevel=2
+        )
+        kwargs.pop('sleep')
+
+    # TODO: Deprecate `pages` in favor of `page_limit` since it is less confusing
+    if 'pages' in kwargs:
+        kwargs['page_limit'] = kwargs.pop('pages')
+
+    if credentials is not None:
+        _scraper.login(*credentials)
+
+    if page_name is not None:
+        return _scraper.get_followers_by_search(page_name, **kwargs)
+
+    raise ValueError('No page with name')
 
 
 def get_posts_by_search(
