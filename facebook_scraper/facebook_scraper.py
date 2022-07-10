@@ -216,15 +216,27 @@ class FacebookScraper:
                 text = page_elem.attrs.get("innerText") or page_elem.attrs.get("aria-label") or page_elem.attrs.get("outerText")
                 lines = text.split('\n')
                 seperator = '·'
+                info['verified'] = False
+                additional_info = ''
                 if seperator in lines[1]:
                     page_info = seperator.split(seperator)
                     info['name'] = lines[0]
                     info['type'] = page_info[0]  # definitely will be there.
-                    additional_info = page_info[-1]
+                    if page_info[-1] != info['type']:
+                        additional_info = page_info[-1]
                 else:
                     info['name'] = lines[0]
-                    info['type'] = lines[1] or get_item_at_idx(lines, 2)  # definitely will be there.
-                    additional_info = lines[-1]
+                    verified_loc = 2 if lines[1] == '' else 1
+                    following_idx = verified_loc
+                    if lines[verified_loc] == "Verified":
+                        info['verified'] = True
+                        following_idx += 1
+                    if lines[following_idx] == "You're following this person.":
+                        info['type'] = lines[following_idx + 1]
+                    else:
+                        info['type'] = lines[1] or get_item_at_idx(lines, 2)  # definitely will be there
+                    if lines[-1] != info['type']:
+                        additional_info = lines[-1]
                 if followers := follow_regex.search(text):
                     info["followers"] = followers.group(1)
                 info["additional_info"] = additional_info

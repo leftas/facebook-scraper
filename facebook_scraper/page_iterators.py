@@ -302,7 +302,8 @@ class SearchPagePagesParser(PageParser):
     cursor_regex_2 = re.compile(r'href":"[^"]+(/search/[^"]+)"')
 
     def get_page(self) -> Page:
-        return super()._get_page('#BrowseResultsContainer div[role="button"]', '#BrowseResultsContainer div[role="button"]')
+        id = '#BrowseResultsContainer div[data-module-role="ENTITY_PAGES"] div[role="button"]'
+        return super()._get_page(id, id)
 
     def get_next_page(self) -> Optional[URL]:
         if self.cursor_blob is not None:
